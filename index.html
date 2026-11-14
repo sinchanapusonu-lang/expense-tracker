@@ -48,6 +48,10 @@
           <i data-lucide="wallet"></i>
           <span>Budget</span>
         </button>
+        <button type="button" class="nav-item" data-view="goals">
+          <i data-lucide="target"></i>
+          <span>Savings Goals</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -91,6 +95,20 @@
 
       <!-- Main Viewport Content -->
       <main class="viewport-content">
+        <!-- Global Backend Error & Loading States -->
+        <div id="backend-status-banner" class="alert-banner is-danger" style="margin-bottom: 20px;" hidden>
+          <div class="alert-banner-content">
+            <i data-lucide="alert-octagon"></i>
+            <span id="backend-status-message">Unable to connect to the backend server.</span>
+          </div>
+          <button id="backend-retry-btn" type="button" class="btn btn-secondary btn-sm">Retry</button>
+        </div>
+
+        <div id="backend-loading-indicator" class="empty-state-compact" style="min-height: 140px; margin-bottom: 20px;" hidden>
+          <i data-lucide="loader-2"></i>
+          <p>Connecting to server and synchronizing data...</p>
+        </div>
+
         <!-- View 1: Dashboard -->
         <section id="view-dashboard" class="view-section" aria-labelledby="topbar-title">
           <div id="dashboard-budget-alert" class="alert-banner" hidden></div>
@@ -389,6 +407,42 @@
             <div id="budget-category-breakdown"></div>
           </article>
         </section>
+
+        <!-- View 5: Smart Savings Goals -->
+        <section id="view-goals" class="view-section" hidden>
+          <div class="toolbar-panel">
+            <div class="toolbar-row" style="justify-content: space-between;">
+              <div>
+                <h2 class="panel-title" style="font-size: 16px;">Smart Savings Goals</h2>
+                <p class="panel-subtitle">Plan, track, and automatically pace your savings targets</p>
+              </div>
+              <button id="open-add-goal-btn" type="button" class="btn btn-primary">
+                <i data-lucide="plus"></i>
+                <span>New Goal</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" id="goals-kpis">
+            <!-- Dynamically populated by goals.js -->
+          </div>
+
+          <div id="goals-grid" class="goals-grid">
+            <!-- Dynamically populated by goals.js -->
+          </div>
+
+          <div id="goals-empty-state" class="empty-state" hidden>
+            <i data-lucide="target"></i>
+            <h3>No savings goals yet</h3>
+            <p>Set up your first financial target—such as an emergency fund, travel, or a major purchase—and receive smart pacing recommendations.</p>
+            <div class="empty-state-actions">
+              <button id="goals-empty-add-btn" type="button" class="btn btn-primary">
+                <i data-lucide="plus"></i>
+                <span>Create Savings Goal</span>
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   </div>
@@ -524,6 +578,159 @@
       </div>
       <div class="modal-footer">
         <button id="data-modal-done-btn" type="button" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Savings Goal Modal -->
+  <div id="goal-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="goal-modal-title" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="goal-modal-title" class="modal-title">Create Savings Goal</h2>
+        <button id="goal-modal-close-btn" type="button" class="icon-btn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="goal-form" class="modal-form" novalidate>
+        <input type="hidden" id="goal-id-input" value="" />
+
+        <div class="form-group">
+          <label for="goal-title-input" class="form-label">Goal Title <span class="required-star">*</span></label>
+          <input
+            id="goal-title-input"
+            type="text"
+            class="form-input"
+            placeholder="e.g., Emergency Safety Fund"
+            maxlength="80"
+            required
+          />
+          <p id="goal-title-error" class="form-error" hidden></p>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="goal-target-input" class="form-label">Target Amount (USD) <span class="required-star">*</span></label>
+            <div class="input-with-prefix">
+              <span class="input-prefix" aria-hidden="true">$</span>
+              <input
+                id="goal-target-input"
+                type="number"
+                step="0.01"
+                min="1"
+                class="form-input"
+                placeholder="5000.00"
+                required
+              />
+            </div>
+            <p id="goal-target-error" class="form-error" hidden></p>
+          </div>
+
+          <div class="form-group">
+            <label for="goal-current-input" class="form-label">Starting Amount (USD)</label>
+            <div class="input-with-prefix">
+              <span class="input-prefix" aria-hidden="true">$</span>
+              <input
+                id="goal-current-input"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-input"
+                placeholder="0.00"
+              />
+            </div>
+            <p id="goal-current-error" class="form-error" hidden></p>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="goal-category-input" class="form-label">Category</label>
+            <select id="goal-category-input" class="form-input"></select>
+            <p id="goal-category-error" class="form-error" hidden></p>
+          </div>
+
+          <div class="form-group">
+            <label for="goal-date-input" class="form-label">Target Date (Optional)</label>
+            <input id="goal-date-input" type="date" class="form-input" />
+            <p id="goal-date-error" class="form-error" hidden></p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="goal-modal-cancel-btn" type="button" class="btn btn-secondary">Cancel</button>
+          <button id="goal-modal-submit-btn" type="submit" class="btn btn-primary">Save Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Contribute Funds to Goal Modal -->
+  <div id="contribute-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="contribute-modal-title" hidden>
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h2 id="contribute-modal-title" class="modal-title">Contribute to Goal</h2>
+        <button id="contribute-modal-close-btn" type="button" class="icon-btn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="contribute-form" class="modal-form" novalidate>
+        <input type="hidden" id="contribute-goal-id-input" value="" />
+
+        <div class="modal-body" style="padding: 0 0 16px 0;">
+          <p class="confirm-text" style="margin-bottom: 14px;">
+            Add funds toward <strong id="contribute-goal-name">your goal</strong>.
+          </p>
+
+          <div class="form-group">
+            <label for="contribute-amount-input" class="form-label">Deposit Amount (USD) <span class="required-star">*</span></label>
+            <div class="input-with-prefix">
+              <span class="input-prefix" aria-hidden="true">$</span>
+              <input
+                id="contribute-amount-input"
+                type="number"
+                step="0.01"
+                min="0.01"
+                class="form-input"
+                placeholder="100.00"
+                required
+              />
+            </div>
+            <p id="contribute-amount-error" class="form-error" hidden></p>
+          </div>
+
+          <div class="quick-preset-row">
+            <button type="button" class="btn btn-secondary btn-sm preset-btn" data-preset="25">+$25</button>
+            <button type="button" class="btn btn-secondary btn-sm preset-btn" data-preset="50">+$50</button>
+            <button type="button" class="btn btn-secondary btn-sm preset-btn" data-preset="100">+$100</button>
+            <button type="button" class="btn btn-secondary btn-sm preset-btn" data-preset="250">+$250</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="contribute-cancel-btn" type="button" class="btn btn-secondary">Cancel</button>
+          <button id="contribute-submit-btn" type="submit" class="btn btn-primary">Add Funds</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Goal Confirmation Modal -->
+  <div id="delete-goal-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-goal-modal-title" hidden>
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h2 id="delete-goal-modal-title" class="modal-title">Delete Savings Goal</h2>
+        <button id="delete-goal-close-btn" type="button" class="icon-btn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="confirm-text">Are you sure you want to delete <strong id="delete-goal-name">this goal</strong>? This will remove the goal and all tracked progress.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="delete-goal-cancel-btn" type="button" class="btn btn-secondary">Cancel</button>
+        <button id="delete-goal-confirm-btn" type="button" class="btn btn-danger">Delete</button>
       </div>
     </div>
   </div>
